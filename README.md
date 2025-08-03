@@ -33,4 +33,4 @@
 MIT © [Ankit Singh](https://github.com/ankitsingh0101)  
 
 ## Issue
-when I run this whole project through vscode in terminal it works properly(uses postman) but after deployment in vercel the save and load section doesn't work.If someone have idea about this guide me or you directly improve it.
+when I run this whole project through vscode,it works properly(uses postman) but after deployment in vercel the save and load section doesn't work.If someone have idea about this guide me or you can make changes.
