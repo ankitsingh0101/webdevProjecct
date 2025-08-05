@@ -1,10 +1,12 @@
 // ==================== BACKEND INTEGRATION ==================== //
 // Add these functions to your existing script.js
+const API_BASE = "https://algo-visualizer-api.onrender.com";
+
 
 // 1. Fetch available algorithms from backend
 async function fetchAlgorithms() {
   try {
-    const response = await fetch('http://localhost:3001/api/algorithms');
+    const response = await fetch(`${API_BASE}/api/algorithms`);
     const data = await response.json();
     console.log("Available algorithms:", data.algorithms);
     // Optional: Update UI with fetched algorithms
@@ -15,7 +17,7 @@ async function fetchAlgorithms() {
 
 // 2. Save visualization to backend
 async function saveVisualization() {
-  const response = await fetch('http://localhost:3001/api/visualizations', {
+  const response = await fetch(`${API_BASE}/api/visualizations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -30,7 +32,7 @@ async function saveVisualization() {
 
 // 3. Load saved visualizations
 async function loadVisualizations() {
-  const response = await fetch('http://localhost:3001/api/visualizations');
+  const response = await fetch(`${API_BASE}/api/visualizations`);
   return await response.json();
 }
 
@@ -46,7 +48,7 @@ async function loadAndDisplay() {
 }
 
 async function loadViz(id) {
-  const response = await fetch(`http://localhost:3001/api/visualizations/${id}`);
+  const response = await fetch(`${API_BASE}/api/visualizations/${id}`);
   let { algorithm, array, steps } = await response.json();
   // Update your visualizer with this data
   currentAlgorithm = algorithm;
