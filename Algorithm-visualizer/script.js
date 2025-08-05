@@ -37,26 +37,44 @@ async function loadVisualizations() {
 }
 
 async function loadAndDisplay() {
-  const visualizations = await loadVisualizations();
+  const response = await loadVisualizations();
   const listDiv = document.getElementById('saved-viz-list');
-  listDiv.innerHTML = visualizations.map(viz => `
-    <div>
-      <p>Algorithm: ${viz.algorithm}</p>
-      <button onclick="loadViz('${viz._id}')">Load</button>
-    </div>
-  `).join('');
+  
+  if (response && response.data) {
+    listDiv.innerHTML = response.data.map(viz => `
+      <div class="saved-viz-item">
+        <p>Algorithm: ${viz.algorithm}</p>
+        <p>Elements: ${viz.array.length}</p>
+        <button onclick="loadViz('${viz._id}')">Load</button>
+      </div>
+    `).join('');
+  } else {
+    listDiv.innerHTML = '<p>No saved visualizations found</p>';
+    console.error('Unexpected response format:', response);
+  }
 }
 
 async function loadViz(id) {
-  const response = await fetch(`${API_BASE}/api/visualizations/${id}`);
-  let { algorithm, array, steps } = await response.json();
-  // Update your visualizer with this data
-  currentAlgorithm = algorithm;
-  array = array;
-  animationSteps = steps;
-  startVisualization();
-  currentStep = 0; // Reset animation
-  drawArray(array); // Immediate visual update
+  try {
+    const response = await fetch(`${API_BASE}/api/visualizations/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch visualization');
+    
+    const { algorithm, array, steps } = await response.json();
+    currentAlgorithm = algorithm;
+    array = array;
+    animationSteps = steps;
+    
+    // Update UI
+    document.getElementById('algorithm-select').value = algorithm;
+    startVisualization();
+    currentStep = 0;
+    drawArray(array);
+    
+    showToast('Visualization loaded!', 'success');
+  } catch (error) {
+    console.error('Load error:', error);
+    showToast('Failed to load visualization', 'error');
+  }
 }
 
 //Save button feedback
