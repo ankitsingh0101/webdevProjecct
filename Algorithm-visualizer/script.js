@@ -1,6 +1,5 @@
 const API_BASE = "https://algo-visualizer-api.onrender.com";
 
-// Mutable globals
 let array = [70, 20, 90, 10, 50, 30, 60, 80, 40];
 let animationSteps = [];
 let currentStep = 0;
@@ -9,22 +8,24 @@ let animationId = null;
 let currentAlgorithm = 'merge';
 let useArray = [];
 
-// 1. Fetch available algorithms from backend
 async function fetchAlgorithms() {
   try {
     const response = await fetch(`${API_BASE}/api/algorithms`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     console.log("Available algorithms:", data.algorithms);
-    // Optional: Update UI with fetched algorithms list
   } catch (error) {
     console.error("Failed to fetch algorithms:", error);
   }
 }
 
-// 2. Save visualization to backend
 async function saveVisualization() {
   try {
+    if (!Array.isArray(animationSteps) || animationSteps.length === 0) {
+      showToast('No steps to save. Run the visualization first.', 'error');
+      return;
+    }
+
     const response = await fetch(`${API_BASE}/api/visualizations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -34,6 +35,7 @@ async function saveVisualization() {
         steps: animationSteps
       })
     });
+
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const result = await response.json();
     console.log('Saved:', result);
@@ -44,7 +46,6 @@ async function saveVisualization() {
   }
 }
 
-// 3. Load saved visualizations
 async function loadVisualizations() {
   try {
     const response = await fetch(`${API_BASE}/api/visualizations`);
@@ -59,12 +60,12 @@ async function loadVisualizations() {
 async function loadAndDisplay() {
   const response = await loadVisualizations();
   const listDiv = document.getElementById('saved-viz-list');
-  
+
   if (response && response.data) {
     listDiv.innerHTML = response.data.map(viz => `
       <div class="saved-viz-item">
         <p>Algorithm: ${viz.algorithm}</p>
-        <p>Elements: ${viz.array.length}</p>
+        <p>Elements: ${viz.array?.length || 0}</p>
         <button onclick="loadViz('${viz._id}')">Load</button>
       </div>
     `).join('');
@@ -73,35 +74,27 @@ async function loadAndDisplay() {
   }
 }
 
-// Load and display one saved visualization by ID
 async function loadViz(id) {
   try {
     const response = await fetch(`${API_BASE}/api/visualizations/${id}`);
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`HTTP ${response.status}: ${text}`);
-    }
-    
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    console.log('Loaded data:', data);
 
-    const { algorithm, array: loadedArray, steps, arr } = data;
-    const useThisArray = loadedArray || arr;
-
-    if (!Array.isArray(useThisArray)) {
+    const { algorithm, array: loadedArray, steps } = data;
+    if (!Array.isArray(loadedArray) || !Array.isArray(steps)) {
       showToast('Loaded visualization has invalid data!', 'error');
-      console.error('Invalid array from backend:', useThisArray);
-      return;  // Do not proceed if invalid
+      console.error('Invalid loaded data:', data);
+      return;
     }
 
     currentAlgorithm = algorithm;
-    useArray = useThisArray;
+    useArray = loadedArray;
     animationSteps = steps;
 
     document.getElementById('algorithm-select').value = algorithm;
-    startVisualization();
-    currentStep = 0;
     drawArray(loadedArray);
+    currentStep = 0;
+    isPlaying = false;
 
     showToast('Visualization loaded!', 'success');
   } catch (error) {
@@ -110,8 +103,6 @@ async function loadViz(id) {
   }
 }
 
-
-// Save button feedback & event listener
 document.getElementById('save-btn').addEventListener('click', async () => {
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
@@ -121,10 +112,8 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   btn.textContent = 'Save';
 });
 
-// Load button event listener
 document.getElementById('load-btn').addEventListener('click', loadAndDisplay);
 
-// Toast function
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
@@ -133,83 +122,41 @@ function showToast(message, type = 'success') {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Pseudocode for algorithms
 const pseudocode = {
-  merge: `MERGE-SORT(A, p, r):
- if p < r
-   q = floor((p + r) / 2)
-   MERGE-SORT(A, p, q)
-   MERGE-SORT(A, q+1, r)
-   MERGE(A, p, q, r)`,
-
-  quick: `QUICK-SORT(A, low, high):
- if low < high
-   pi = PARTITION(A, low, high)
-   QUICK-SORT(A, low, pi - 1)
-   QUICK-SORT(A, pi + 1, high)`,
-
-  bubble: `BUBBLE-SORT(A):
- for i = 1 to A.length - 1
-   for j = 0 to A.length - i - 1
-     if A[j] > A[j+1]
-       swap(A[j], A[j+1])`,
-
-  selection: `SELECTION-SORT(A):
- for i = 0 to A.length-1
-   min_idx = i
-   for j = i+1 to A.length
-     if A[j] < A[min_idx]
-       min_idx = j
-   swap(A[i], A[min_idx])`,
-
-  insertion: `INSERTION-SORT(A):
- for i = 1 to A.length - 1
-   key = A[i]
-   j = i - 1
-   while j >= 0 and A[j] > key
-     A[j+1] = A[j]
-     j = j - 1
-   A[j+1] = key`
+  merge: `MERGE-SORT(A, p, r):\n if p < r\n   q = floor((p + r) / 2)\n   MERGE-SORT(A, p, q)\n   MERGE-SORT(A, q+1, r)\n   MERGE(A, p, q, r)`,
+  quick: `QUICK-SORT(A, low, high):\n if low < high\n   pi = PARTITION(A, low, high)\n   QUICK-SORT(A, low, pi - 1)\n   QUICK-SORT(A, pi + 1, high)`,
+  bubble: `BUBBLE-SORT(A):\n for i = 1 to A.length - 1\n   for j = 0 to A.length - i - 1\n     if A[j] > A[j+1]\n       swap(A[j], A[j+1])`,
+  selection: `SELECTION-SORT(A):\n for i = 0 to A.length-1\n   min_idx = i\n   for j = i+1 to A.length\n     if A[j] < A[min_idx]\n       min_idx = j\n   swap(A[i], A[min_idx])`,
+  insertion: `INSERTION-SORT(A):\n for i = 1 to A.length - 1\n   key = A[i]\n   j = i - 1\n   while j >= 0 and A[j] > key\n     A[j+1] = A[j]\n     j = j - 1\n   A[j+1] = key`
 };
 
-// Update pseudocode when algorithm changes
-document.getElementById('algorithm-select').addEventListener('change', function() {
+document.getElementById('algorithm-select').addEventListener('change', function () {
   const algorithm = this.value;
   document.getElementById('code-display').textContent = pseudocode[algorithm];
 });
 document.getElementById('code-display').textContent = pseudocode['merge'];
 
-// Initialize Canvas
 function initCanvas() {
   const canvas = document.getElementById('visualizer-canvas');
   canvas.width = 800;
   canvas.height = 400;
 }
 
-// Draw the array on canvas
 function drawArray(arr, highlights = []) {
-  if (!Array.isArray(arr)) {
-    console.error('drawArray received invalid array:', arr);
-    return;  // Exit the function early if arr is invalid
-  }
-  
+  if (!Array.isArray(arr)) return;
   const canvas = document.getElementById('visualizer-canvas');
   const ctx = canvas.getContext('2d');
-  
   ctx.fillStyle = '#f0f0f0';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
   const barWidth = Math.max(5, canvas.width / arr.length);
   const maxVal = Math.max(...arr);
-  
+
   for (let i = 0; i < arr.length; i++) {
     const barHeight = (arr[i] / maxVal) * canvas.height;
     const x = i * barWidth;
     const y = canvas.height - barHeight;
-
     ctx.fillStyle = highlights.includes(i) ? '#e74c3c' : '#3498db';
     ctx.fillRect(x, y, barWidth - 2, barHeight);
-
     ctx.fillStyle = '#000';
     ctx.font = '12px Arial';
     ctx.textAlign = 'center';
@@ -217,7 +164,6 @@ function drawArray(arr, highlights = []) {
   }
 }
 
-// Animation control
 function animate() {
   if (currentStep >= animationSteps.length || !isPlaying) {
     isPlaying = false;
@@ -225,7 +171,6 @@ function animate() {
   }
 
   const step = animationSteps[currentStep];
-  
   if (step.type === "compare") {
     drawArray(array, step.indices);
   } else if (step.type === "overwrite") {
@@ -240,19 +185,17 @@ function animate() {
   currentStep++;
   const speed = document.getElementById('speed').value;
   const delay = 1000 - (speed * 45);
-  
   animationId = setTimeout(animate, delay);
 }
 
-// Control functions
 function startVisualization() {
   if (!isPlaying) {
     const algorithm = document.getElementById('algorithm-select').value;
-    
+
     if (currentAlgorithm !== algorithm || animationSteps.length === 0) {
       resetVisualization();
       currentAlgorithm = algorithm;
-      
+
       switch (algorithm) {
         case 'merge':
           animationSteps = getMergeSortSteps([...array]);
@@ -270,8 +213,10 @@ function startVisualization() {
           animationSteps = getInsertionSortSteps([...array]);
           break;
       }
+
+      useArray = [...array];
     }
-    
+
     isPlaying = true;
     animate();
   }
@@ -279,9 +224,7 @@ function startVisualization() {
 
 function pauseVisualization() {
   isPlaying = false;
-  if (animationId) {
-    clearTimeout(animationId);
-  }
+  if (animationId) clearTimeout(animationId);
 }
 
 function resetVisualization() {
@@ -292,14 +235,9 @@ function resetVisualization() {
   drawArray(array);
 }
 
-// Sorting Algorithms
-
-// Merge Sort
 function getMergeSortSteps(arr) {
-  const steps = [];
-  const arrayCopy = [...arr];
-  
-  function mergeSort(start = 0, end = arrayCopy.length - 1) {
+  const steps = [], copy = [...arr];
+  function mergeSort(start, end) {
     if (start < end) {
       const mid = Math.floor((start + end) / 2);
       mergeSort(start, mid);
@@ -307,138 +245,108 @@ function getMergeSortSteps(arr) {
       merge(start, mid, end);
     }
   }
-  
-  function merge(start, mid, end) {
-    let temp = [];
-    let i = start, j = mid + 1;
 
+  function merge(start, mid, end) {
+    const temp = [];
+    let i = start, j = mid + 1;
     while (i <= mid && j <= end) {
       steps.push({ type: "compare", indices: [i, j] });
-      if (arrayCopy[i] <= arrayCopy[j]) temp.push(arrayCopy[i++]);
-      else temp.push(arrayCopy[j++]);
+      if (copy[i] <= copy[j]) temp.push(copy[i++]);
+      else temp.push(copy[j++]);
     }
-
-    while (i <= mid) temp.push(arrayCopy[i++]);
-    while (j <= end) temp.push(arrayCopy[j++]);
-
+    while (i <= mid) temp.push(copy[i++]);
+    while (j <= end) temp.push(copy[j++]);
     for (let k = 0; k < temp.length; k++) {
-      arrayCopy[start + k] = temp[k];
+      copy[start + k] = temp[k];
       steps.push({ type: "overwrite", index: start + k, value: temp[k] });
     }
   }
-  
-  mergeSort();
+
+  mergeSort(0, copy.length - 1);
   return steps;
 }
 
-// Quick Sort
 function getQuickSortSteps(arr) {
-  const steps = [];
-  const arrayCopy = [...arr];
-  
-  function quickSort(low = 0, high = arrayCopy.length - 1) {
+  const steps = [], copy = [...arr];
+  function quickSort(low, high) {
     if (low < high) {
       const pi = partition(low, high);
       quickSort(low, pi - 1);
       quickSort(pi + 1, high);
     }
   }
-  
+
   function partition(low, high) {
-    const pivot = arrayCopy[high];
+    const pivot = copy[high];
     let i = low - 1;
-    
     for (let j = low; j < high; j++) {
       steps.push({ type: "compare", indices: [j, high] });
-      if (arrayCopy[j] < pivot) {
+      if (copy[j] < pivot) {
         i++;
-        [arrayCopy[i], arrayCopy[j]] = [arrayCopy[j], arrayCopy[i]];
+        [copy[i], copy[j]] = [copy[j], copy[i]];
         steps.push({ type: "swap", indices: [i, j] });
       }
     }
-    
-    [arrayCopy[i + 1], arrayCopy[high]] = [arrayCopy[high], arrayCopy[i + 1]];
+    [copy[i + 1], copy[high]] = [copy[high], copy[i + 1]];
     steps.push({ type: "swap", indices: [i + 1, high] });
     return i + 1;
   }
-  
-  quickSort();
+
+  quickSort(0, copy.length - 1);
   return steps;
 }
 
-// Bubble Sort
 function getBubbleSortSteps(arr) {
-  const steps = [];
-  const arrayCopy = [...arr];
-  const n = arrayCopy.length;
-  
-  for (let i = 0; i < n - 1; i++) {
-    for (let j = 0; j < n - i - 1; j++) {
+  const steps = [], copy = [...arr];
+  for (let i = 0; i < copy.length - 1; i++) {
+    for (let j = 0; j < copy.length - i - 1; j++) {
       steps.push({ type: "compare", indices: [j, j + 1] });
-      if (arrayCopy[j] > arrayCopy[j + 1]) {
-        [arrayCopy[j], arrayCopy[j + 1]] = [arrayCopy[j + 1], arrayCopy[j]];
+      if (copy[j] > copy[j + 1]) {
+        [copy[j], copy[j + 1]] = [copy[j + 1], copy[j]];
         steps.push({ type: "swap", indices: [j, j + 1] });
       }
     }
   }
-  
   return steps;
 }
 
-// Selection Sort
 function getSelectionSortSteps(arr) {
-  const steps = [];
-  const arrayCopy = [...arr];
-  const n = arrayCopy.length;
-  
-  for (let i = 0; i < n - 1; i++) {
+  const steps = [], copy = [...arr];
+  for (let i = 0; i < copy.length - 1; i++) {
     let minIdx = i;
-    for (let j = i + 1; j < n; j++) {
+    for (let j = i + 1; j < copy.length; j++) {
       steps.push({ type: "compare", indices: [j, minIdx] });
-      if (arrayCopy[j] < arrayCopy[minIdx]) {
-        minIdx = j;
-      }
+      if (copy[j] < copy[minIdx]) minIdx = j;
     }
-    
     if (minIdx !== i) {
-      [arrayCopy[i], arrayCopy[minIdx]] = [arrayCopy[minIdx], arrayCopy[i]];
+      [copy[i], copy[minIdx]] = [copy[minIdx], copy[i]];
       steps.push({ type: "swap", indices: [i, minIdx] });
     }
   }
-  
   return steps;
 }
 
-// Insertion Sort
 function getInsertionSortSteps(arr) {
-  const steps = [];
-  const arrayCopy = [...arr];
-  const n = arrayCopy.length;
-  
-  for (let i = 1; i < n; i++) {
-    let key = arrayCopy[i];
+  const steps = [], copy = [...arr];
+  for (let i = 1; i < copy.length; i++) {
+    const key = copy[i];
     let j = i - 1;
-    
-    while (j >= 0 && arrayCopy[j] > key) {
+    while (j >= 0 && copy[j] > key) {
       steps.push({ type: "compare", indices: [j, i] });
-      arrayCopy[j + 1] = arrayCopy[j];
-      steps.push({ type: "overwrite", index: j + 1, value: arrayCopy[j] });
+      copy[j + 1] = copy[j];
+      steps.push({ type: "overwrite", index: j + 1, value: copy[j] });
       j--;
     }
-    
-    arrayCopy[j + 1] = key;
+    copy[j + 1] = key;
     steps.push({ type: "overwrite", index: j + 1, value: key });
   }
-  
   return steps;
 }
 
-// Attach event listeners on start, pause, reset buttons
 document.getElementById('start-btn').addEventListener('click', startVisualization);
 document.getElementById('pause-btn').addEventListener('click', pauseVisualization);
 document.getElementById('reset-btn').addEventListener('click', resetVisualization);
 
-// Initialization
 window.addEventListener('DOMContentLoaded', () => {
   fetchAlgorithms();
   loadVisualizations();
