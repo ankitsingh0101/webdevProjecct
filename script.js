@@ -22,7 +22,7 @@ async function saveVisualization() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       algorithm: currentAlgorithm,
-      array: array,
+      array: useArray,
       steps: animationSteps
     })
   });
@@ -54,6 +54,7 @@ async function loadAndDisplay() {
   }
 }
 
+//transition
 async function loadViz(id) {
   try {
     const response = await fetch(`${API_BASE}/api/visualizations/${id}`);
@@ -61,7 +62,7 @@ async function loadViz(id) {
     
     const { algorithm, array, steps } = await response.json();
     currentAlgorithm = algorithm;
-    array = array;
+    useArray = array;
     animationSteps = steps;
     
     // Update UI
@@ -103,7 +104,7 @@ function showToast(message, type = 'success') {
 }
 
 // ==================== UI UPDATES ==================== //
-// Add Save button event listener
+// button event listener
 document.getElementById('save-btn').addEventListener('click', saveVisualization);
 document.getElementById('load-btn').addEventListener('click', loadAndDisplay);
 
@@ -288,7 +289,6 @@ function resetVisualization() {
 }
 
 // Sorting Algorithms Implementations
-
 // Merge Sort
 function getMergeSortSteps(arr) {
     const steps = [];
