@@ -82,7 +82,16 @@ async function loadViz(id) {
       throw new Error(`HTTP ${response.status}: ${text}`);
     }
     
-    const { algorithm, array: loadedArray, steps } = await response.json();
+    const data = await response.json();
+    console.log('Loaded data:', data);
+
+    const { algorithm, array: loadedArray, steps } = data;
+
+    if (!Array.isArray(loadedArray)) {
+      showToast('Loaded visualization has invalid data!', 'error');
+      console.error('Invalid array from backend:', loadedArray);
+      return;  // Do not proceed if invalid
+    }
 
     currentAlgorithm = algorithm;
     useArray = loadedArray;
@@ -99,6 +108,7 @@ async function loadViz(id) {
     showToast('Failed to load visualization', 'error');
   }
 }
+
 
 // Save button feedback & event listener
 document.getElementById('save-btn').addEventListener('click', async () => {
@@ -177,6 +187,11 @@ function initCanvas() {
 
 // Draw the array on canvas
 function drawArray(arr, highlights = []) {
+  if (!Array.isArray(arr)) {
+    console.error('drawArray received invalid array:', arr);
+    return;  // Exit the function early if arr is invalid
+  }
+  
   const canvas = document.getElementById('visualizer-canvas');
   const ctx = canvas.getContext('2d');
   
@@ -190,10 +205,10 @@ function drawArray(arr, highlights = []) {
     const barHeight = (arr[i] / maxVal) * canvas.height;
     const x = i * barWidth;
     const y = canvas.height - barHeight;
-    
+
     ctx.fillStyle = highlights.includes(i) ? '#e74c3c' : '#3498db';
     ctx.fillRect(x, y, barWidth - 2, barHeight);
-    
+
     ctx.fillStyle = '#000';
     ctx.font = '12px Arial';
     ctx.textAlign = 'center';
