@@ -85,16 +85,17 @@ async function loadViz(id) {
     const data = await response.json();
     console.log('Loaded data:', data);
 
-    const { algorithm, array: loadedArray, steps } = data;
+    const { algorithm, array: loadedArray, steps, arr } = data;
+    const useThisArray = loadedArray || arr;
 
-    if (!Array.isArray(loadedArray)) {
+    if (!Array.isArray(useThisArray)) {
       showToast('Loaded visualization has invalid data!', 'error');
-      console.error('Invalid array from backend:', loadedArray);
+      console.error('Invalid array from backend:', useThisArray);
       return;  // Do not proceed if invalid
     }
 
     currentAlgorithm = algorithm;
-    useArray = loadedArray;
+    useArray = useThisArray;
     animationSteps = steps;
 
     document.getElementById('algorithm-select').value = algorithm;
