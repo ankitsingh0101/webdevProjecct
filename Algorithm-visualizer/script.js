@@ -38,7 +38,7 @@ async function saveVisualization() {
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const result = await response.json();
-    console.log('Saved:', result);
+    console.log('Saved:', result.data);
     showToast('Saved successfully!', 'success');
   } catch (err) {
     console.error('Save error:', err);
@@ -79,8 +79,7 @@ async function loadViz(id) {
     const response = await fetch(`${API_BASE}/api/visualizations/${id}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-
-    const { algorithm, array: loadedArray, steps } = data;
+    const { algorithm, array: loadedArray, steps } = data.data;
     if (!Array.isArray(loadedArray) || !Array.isArray(steps)) {
       showToast('Loaded visualization has invalid data!', 'error');
       console.error('Invalid loaded data:', data);
